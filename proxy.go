@@ -1,26 +1,25 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 )
 
 func main() {
 	arguments := os.Args
-	if len(arguments) == 3 {
+	if len(arguments) == 2 {
 		log.Fatal("Please provide a port number, server host and port number")
 		return
 	}
 	PORT := ":" + arguments[1]
 	serverAddress := arguments[2]
-	l, err := net.Listen("tcp4", PORT)
+	l, err := net.Listen("tcp", PORT)
+	log.Printf("Proxy running at %s", PORT)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -46,19 +45,9 @@ func handleConnection(client net.Conn, serverAddress string) {
 	if err != nil {
 		log.Fatalf("Could not connect to remote server %s", serverAddress)
 	}
-	for {
-		netData, err := bufio.NewReader(client).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		temp := strings.TrimSpace(netData)
-		if temp == "stop" {
-			fmt.Printf("Goodbye, %s!\n", clientAddress)
-			break
-		}
+	log.Printf("Connected to server %s", serverAddress)
 
-		result := strconv.Itoa(1) + "\n"
-		client.Write([]byte(string(result)))
-	}
+	go func() { _, _ = io.Copy(client, server) }()
+	go func() { _, _ = io.Copy(server, client) }()
+
 }
